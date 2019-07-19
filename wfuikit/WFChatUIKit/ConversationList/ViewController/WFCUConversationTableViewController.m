@@ -157,7 +157,7 @@
     [KxMenu showMenuInView:self.view
                   fromRect:CGRectMake(self.view.bounds.size.width - 56, kStatusBarAndNavigationBarHeight + searchExtra, 48, 5)
                  menuItems:@[
-                             [KxMenuItem menuItem:@"创建聊天"
+                             [KxMenuItem menuItem:@"发起群聊"
                                             image:[UIImage imageNamed:@"menu_start_chat"]
                                            target:self
                                            action:@selector(startChatAction:)],
@@ -329,7 +329,7 @@
 }
 
 - (void)refreshList {
-  self.conversations = [[[WFCCIMService sharedWFCIMService] getConversationInfos:@[@(Single_Type), @(Group_Type), @(Channel_Type)] lines:@[@(0), @(1)]] mutableCopy];
+  self.conversations = [[[WFCCIMService sharedWFCIMService] getConversationInfos:@[@(Single_Type), @(Group_Type), @(Channel_Type)] lines:@[@(0)]] mutableCopy];
     [self updateBadgeNumber];
   [self.tableView reloadData];
 }
@@ -394,7 +394,7 @@
 }
 - (void)refreshLeftButton {
     dispatch_async(dispatch_get_main_queue(), ^{
-        WFCCUnreadCount *unreadCount = [[WFCCIMService sharedWFCIMService] getUnreadCount:@[@(Single_Type), @(Group_Type), @(Channel_Type)] lines:@[@(0), @(1)]];
+        WFCCUnreadCount *unreadCount = [[WFCCIMService sharedWFCIMService] getUnreadCount:@[@(Single_Type), @(Group_Type), @(Channel_Type)] lines:@[@(0)]];
         NSUInteger count = unreadCount.unread;
         
         NSString *title = nil;
@@ -740,7 +740,7 @@
 -(void)updateSearchResultsForSearchController:(UISearchController *)searchController {
     NSString *searchString = [self.searchController.searchBar text];
     if (searchString.length) {
-        self.searchConversationList = [[WFCCIMService sharedWFCIMService] searchConversation:searchString inConversation:@[@(Single_Type), @(Group_Type), @(Channel_Type)] lines:@[@(0), @(1)]];
+        self.searchConversationList = [[WFCCIMService sharedWFCIMService] searchConversation:searchString inConversation:@[@(Single_Type), @(Group_Type), @(Channel_Type)] lines:@[@(0)]];
         self.searchFriendList = [[WFCCIMService sharedWFCIMService] searchFriends:searchString];
         self.searchGroupList = [[WFCCIMService sharedWFCIMService] searchGroups:searchString];
     } else {

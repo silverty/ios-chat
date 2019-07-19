@@ -18,12 +18,14 @@
 #import "WFCUCreateGroupViewController.h"
 #import "WFCUProfileTableViewController.h"
 #import "WFCUCreateGroupViewController.h"
+#import "GroupManageTableViewController.h"
 
 #import "MBProgressHUD.h"
 #import "WFCUMyProfileTableViewController.h"
 #import "WFCUConversationSearchTableViewController.h"
 #import "WFCUChannelProfileViewController.h"
 #import "QrCodeHelper.h"
+#import "UIView+Toast.h"
 
 @interface WFCUConversationSettingViewController () <UITableViewDataSource, UITableViewDelegate, UICollectionViewDelegate, UICollectionViewDataSource>
 @property (nonatomic, strong)UICollectionView *memberCollectionView;
@@ -69,7 +71,17 @@
         if (self.conversation.type == Single_Type) {
             memberCollectionCount = 2;
         } else if(self.conversation.type == Group_Type) {
-            memberCollectionCount = [self isGroupManager] ? (int)self.memberList.count + 2 : (int)self.memberList.count + 1;
+            if ([self isGroupManager]) {
+                memberCollectionCount = (int)self.memberList.count + 2;
+            } else if(self.groupInfo.type == GroupType_Restricted) {
+                if (self.groupInfo.joinType == 1 || self.groupInfo.joinType == 0) {
+                    memberCollectionCount = (int)self.memberList.count + 1;
+                } else {
+                    memberCollectionCount = (int)self.memberList.count;
+                }
+            } else {
+                memberCollectionCount = (int)self.memberList.count + 1;
+            }
         } else if(self.conversation.type == Channel_Type) {
             memberCollectionCount = 1;
         }
@@ -132,15 +144,17 @@
     [self.view addSubview:self.tableView];
     
     if(self.conversation.type == Group_Type) {
-        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onGroupMemberUpdated:) name:kGroupMemberUpdated object:self.conversation.target];
+        __weak typeof(self)ws = self;
+        [[NSNotificationCenter defaultCenter] addObserverForName:kGroupMemberUpdated object:nil queue:[NSOperationQueue mainQueue] usingBlock:^(NSNotification * _Nonnull note) {
+            if ([ws.conversation.target isEqualToString:note.object]) {
+                ws.groupInfo = [[WFCCIMService sharedWFCIMService] getGroupInfo:ws.conversation.target refresh:NO];
+                ws.memberList = [[WFCCIMService sharedWFCIMService] getGroupMembers:ws.conversation.target forceUpdate:NO];
+                [ws.memberCollectionView reloadData];
+            }
+        }];
     }
 }
 
-- (void)onGroupMemberUpdated:(NSNotification *)notification {
-    self.groupInfo = [[WFCCIMService sharedWFCIMService] getGroupInfo:self.conversation.target refresh:NO];
-    self.memberList = [[WFCCIMService sharedWFCIMService] getGroupMembers:self.conversation.target forceUpdate:NO];
-    [self.memberCollectionView reloadData];
-}
 
 - (void)onTapChannelPortrait:(id)sender {
     WFCUChannelProfileViewController *pvc = [[WFCUChannelProfileViewController alloc] init];
@@ -354,7 +368,7 @@
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
     if (self.conversation.type == Group_Type) {
         if (section == 0) {
-            if ([self isGroupManager]) {
+            if ([self isGroupManager] && self.groupInfo.type == GroupType_Restricted) {
                 return 4; //群名称，群头像，群二维码，群管理，
             } else {
                 return 3; //群名称，群头像，群二维码
@@ -532,6 +546,10 @@
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     __weak typeof(self)weakSelf = self;
   if ([self isGroupNameCell:indexPath]) {
+      if (self.groupInfo.type == GroupType_Restricted && ![self isGroupManager]) {
+          [self.view makeToast:@"只有管理员才可以修改群名称" duration:1 position:CSToastPositionCenter];
+          return;
+      }
     WFCUGeneralModifyViewController *gmvc = [[WFCUGeneralModifyViewController alloc] init];
     gmvc.defaultValue = self.groupInfo.name;
     gmvc.titleText = @"修改群名称";
@@ -546,6 +564,10 @@
     UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:gmvc];
     [self.navigationController presentViewController:nav animated:YES completion:nil];
   } else if ([self isGroupPortraitCell:indexPath]) {
+      if (self.groupInfo.type == GroupType_Restricted && ![self isGroupManager]) {
+          [self.view makeToast:@"只有管理员才可以修改群头像" duration:1 position:CSToastPositionCenter];
+          return;
+      }
     WFCUCreateGroupViewController *vc = [[WFCUCreateGroupViewController alloc] init];
     vc.isModifyPortrait = YES;
     vc.groupId = self.groupInfo.target;
@@ -556,7 +578,9 @@
     
     [self.navigationController pushViewController:vc animated:YES];
   } else if ([self isGroupManageCell:indexPath]) {
-    
+      GroupManageTableViewController *gmvc = [[GroupManageTableViewController alloc] init];
+      gmvc.groupInfo = self.groupInfo;
+      [self.navigationController pushViewController:gmvc animated:YES];
   } else if ([self isSearchMessageCell:indexPath]) {
       WFCUConversationSearchTableViewController *mvc = [[WFCUConversationSearchTableViewController alloc] init];
       mvc.conversation = self.conversation;
@@ -624,6 +648,9 @@
         if([self isGroupManager]) {
             return self.memberList.count + 2;
         } else {
+            if (self.groupInfo.type == GroupType_Restricted && self.groupInfo.joinType != 1 && self.groupInfo.joinType != 0) {
+                return self.memberList.count;
+            }
             return self.memberList.count + 1;
         }
     } else if(self.conversation.type == Single_Type) {

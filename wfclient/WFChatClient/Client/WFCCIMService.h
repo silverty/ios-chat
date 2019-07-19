@@ -55,7 +55,11 @@ typedef NS_ENUM(NSInteger, ModifyMyInfoType) {
 typedef NS_ENUM(NSInteger, ModifyGroupInfoType) {
     Modify_Group_Name = 0,
     Modify_Group_Portrait = 1,
-    Modify_Group_Extra = 2
+    Modify_Group_Extra = 2,
+    Modify_Group_Mute = 3,
+    Modify_Group_JoinType = 4,
+    Modify_Group_PrivateChat = 5,
+    Modify_Group_Searchable = 6
 };
 
 
@@ -236,6 +240,9 @@ typedef NS_ENUM(NSInteger, UserSettingScope) {
  @param conversation 会话
  */
 - (void)clearUnreadStatus:(WFCCConversation *)conversation;
+
+- (void)clearUnreadStatus:(NSArray<NSNumber *> *)conversationTypes
+                              lines:(NSArray<NSNumber *> *)lines;
 
 /**
  清空所有会话的未读数
@@ -746,6 +753,7 @@ typedef NS_ENUM(NSInteger, UserSettingScope) {
 - (void)createGroup:(NSString *)groupId
                name:(NSString *)groupName
            portrait:(NSString *)groupPortrait
+               type:(WFCCGroupType)type
             members:(NSArray *)groupMembers
         notifyLines:(NSArray<NSNumber *> *)notifyLines
       notifyContent:(WFCCMessageContent *)notifyContent
@@ -869,6 +877,24 @@ typedef NS_ENUM(NSInteger, UserSettingScope) {
               success:(void(^)(void))successBlock
                 error:(void(^)(int error_code))errorBlock;
 
+/**
+ 设置群管理
+ 
+ @param groupId 群ID
+ @param isSet    设置或取消
+ @param memberId    成员ID
+ @param notifyLines 默认传 @[@(0)]
+ @param notifyContent 通知消息
+ @param successBlock 成功的回调
+ @param errorBlock 失败的回调
+ */
+- (void)setGroupManager:(NSString *)groupId
+                  isSet:(BOOL)isSet
+              memberIds:(NSArray<NSString *> *)memberId
+            notifyLines:(NSArray<NSNumber *> *)notifyLines
+          notifyContent:(WFCCMessageContent *)notifyContent
+                success:(void(^)(void))successBlock
+                  error:(void(^)(int error_code))errorBlock;
 /**
  获取当前用户收藏的群组
  
